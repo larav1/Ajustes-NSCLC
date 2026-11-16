@@ -58,7 +58,7 @@ else:
     pad_slices.append(slice(start, start + size))
 ```
 
-3. Deslocamento do centro em máscaras não convexas ou com múltiplos componentes: Quando a máscara possuía mais de um componente desconexo ou formato irregular, o centro geométrico da *bounding box* caía em uma região vazia entre os componentes, fazendo com que o corte central de `128³` capturasse apenas tecido saudável/fundo e zerasse a máscara (causa das 52 ROIs vazias).
+2. Deslocamento do centro em máscaras não convexas ou com múltiplos componentes: Quando a máscara possuía mais de um componente desconexo ou formato irregular, o centro geométrico da *bounding box* caía em uma região vazia entre os componentes, fazendo com que o corte central de `128³` capturasse apenas tecido saudável/fundo e zerasse a máscara (causa das 52 ROIs vazias).
 
 ```
 def get_bounding_box(mask, margin=5):
@@ -71,8 +71,14 @@ def get_bounding_box(mask, margin=5):
     ...
 ```
 
+Bounding Box (Caixa Delimitadora): Envolve completamente todos os voxels positivos da máscara de segmentação tumoral, delimitado pelas coordenadas mínimas e máximas da lesão.
+
+Crop (Recorte): É a operação de extrair apenas a sub-região de interesse (ROI) do volume tridimensional da tomografia e da máscara (definida pela bounding box ou por uma janela centrada no tumor), descartando o restante do fundo anatômico irrelevante (como bordas externas do tórax ou regiões distantes da lesão).
+
+Padding (Preenchimento): É a adição controlada de voxels constantes nas bordas de um volume recortado quando suas dimensões são menores do que o tamanho fixo exigido pela rede neural (por exemplo, $128 \times 128 \times 128$), utilizando valores neutros de fundo (como 0 para máscaras binárias/intensidades normalizadas ou -1024 HU para representar o ar na tomografia).
+
 ## Sugestão de ajuste 
 
-- [ ] **Evitar o corte nas bordas:** Quando a *bounding box* do tumor (+ margem) for maior que `128³`, redimensionar (*resize*) o recorte para `(128, 128, 128)` em vez de cortar as extremidades (interpolação linear na TC e *nearest neighbor* na máscara).
+- [ ] **Evitar o corte nas bordas:** Quando a *bounding box* do tumor (+ margem) for maior que `128³`, redimensionar (*resize*) o recorte para `(128, 128, 128)` em vez de cortar as extremidades, usando interpolação linear na TC e *nearest neighbor* na máscara.
 - [ ] **Evitar ROI vazia:** Garantir que o centro do recorte seja calculado a partir dos voxels positivos da máscara (`mask > 0`), conferindo no final que `seg_final.sum() > 0` para todos os pacientes. Inserir uma verificação automática para identificar pacientes cuja máscara final fique vazia `(seg_final.sum() == 0)`.
 - [ ] **Validar visualmente:** Plotar 3 vistas (axial, coronal e sagital) de alguns casos que antes davam erro (ex.: `LUNG1-007`) para confirmar que o tumor está centralizado e inteiro.
