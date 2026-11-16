@@ -79,6 +79,11 @@ Padding (Preenchimento): É a adição controlada de voxels constantes nas borda
 
 ## Sugestão de ajuste 
 
-- [ ] **Evitar o corte nas bordas:** Quando a *bounding box* do tumor (+ margem) for maior que `128³`, redimensionar (*resize*) o recorte para `(128, 128, 128)` em vez de cortar as extremidades, usando interpolação linear na TC e *nearest neighbor* na máscara.
+- [ ] **Evitar o corte nas bordas:** Depois de recortar a bounding box inteira do tumor (+ margem):
+      
+      1. Se ela for menor que 128: preenche as bordas com zeros (padding) até chegar em 128 × 128 × 128.
+      
+      2. Se ela for maior que 128: em vez de cortar o tumor, encolhe proporcionalmente (resize) a caixa inteira para caber dentro de 128 × 128 × 128.
+      
 - [ ] **Evitar ROI vazia:** Garantir que o centro do recorte seja calculado a partir dos voxels positivos da máscara (`mask > 0`), conferindo no final que `seg_final.sum() > 0` para todos os pacientes. Inserir uma verificação automática para identificar pacientes cuja máscara final fique vazia `(seg_final.sum() == 0)`.
 - [ ] **Validar visualmente:** Plotar 3 vistas (axial, coronal e sagital) de alguns casos que antes davam erro (ex.: `LUNG1-007`) para confirmar que o tumor está centralizado e inteiro.
