@@ -18,3 +18,43 @@
   "total_casos_atipicos": 387
 }
 ```
+
+1. com_roi_vazia_erro (52): Em 52 pacientes, a máscara final (seg.npy) terminou com zero voxels de tumor, ou seja, o recorte caiu fora da lesão ou a máscara sumiu.
+2. lesao_totalmente_contida_no_crop (36): Apenas 36 pacientes tiveram o tumor inteiro preservado dentro do cubo de $128^3$ sem tocar ou ser cortado pelas bordas.
+3. total_casos_atipicos (387): Soma de todos os casos que apresentaram algum desvio nos critérios espaciais ou volumétricos (os 52 vazios + os 333 cortados + 2 casos com alguma outra anomalia de volume extremo)
+
+OBS: apenas 8,6% da coorte (36/421) contém o tumor íntegro sem cortes ou deslocamento. Por isso o modelo de unimodal imagem teve o pior desempenho.
+
+## O que deu errado no código original (`image_preprocessing.ipynb`)
+
+Na etapa de recorte e padronização dimensional (`get_bounding_box` + `crop_to_bbox` + `pad_or_crop_to_shape`), ocorreram dois problemas combinados:
+
+1. Corte central rígido de 128 voxels (`if size >= target`): Quando a *bounding box* do tumor (acrescida da margem de 5 voxels) ultrapassava `128 mm` em qualquer eixo, a função `pad_or_crop_to_shape` aplicava um recorte central fixo (`start = (size - 128) // 2`), removendo as extremidades da lesão (causa dos 333 casos truncados).
+
+```
+if size >= target:
+    start = (size - target) // 2
+    crop_slices.append(slice(start, start + target))
+else:
+    start = (target - size) // 2
+    pad_slices.append(slice(start, start + size))
+```
+
+3. Deslocamento do centro em máscaras não convexas ou com múltiplos componentes: Quando a máscara possuía mais de um componente desconexo ou formato irregular, o centro geométrico da *bounding box* caía em uma região vazia entre os componentes, fazendo com que o corte central de `128³` capturasse apenas tecido saudável/fundo e zerasse a máscara (causa das 52 ROIs vazias).
+
+```
+def get_bounding_box(mask, margin=5):
+    coords = np.array(np.where(mask > 0))
+    if coords.size == 0:
+        return None
+
+    min_coords = coords.min(axis=1) - margin
+    max_coords = coords.max(axis=1) + margin
+    ...
+```
+
+## Sugestão de ajuste 
+
+- [ ] **Evitar o corte nas bordas:** Quando a *bounding box* do tumor (+ margem) for maior que `128³`, redimensionar (*resize*) o recorte para `(128, 128, 128)` em vez de cortar as extremidades (interpolação linear na TC e *nearest neighbor* na máscara).
+- [ ] **Evitar ROI vazia:** Garantir que o centro do recorte seja calculado a partir dos voxels positivos da máscara (`mask > 0`), conferindo no final que `seg_final.sum() > 0` para todos os pacientes. Inserir uma verificação automática para identificar pacientes cuja máscara final fique vazia `(seg_final.sum() == 0)`.
+- [ ] **Validar visualmente:** Plotar 3 vistas (axial, coronal e sagital) de alguns casos que antes davam erro (ex.: `LUNG1-007`) para confirmar que o tumor está centralizado e inteiro.
