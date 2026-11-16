@@ -1,3 +1,21 @@
+## Etapas do pré-processamento
+
+| **Etapa** | **Descrição** | **Resultado esperado** | **Status (421 pacientes)** |
+|:---|:---|:---|:---|
+| **1. Dados originais** | Utilização da coorte NSCLC-Radiomics (LUNG1), com TC e segmentação tumoral | Cada paciente deve ter os arquivos correspondentes. | **OK** |
+| **2. Conversão de formato e leitura dos arquivos** | Leitura dos NIfTI de TC e máscara (`nii_aligned`) | Arquivos legíveis e associação correta ao paciente | **OK** |
+| **3. Alinhamento espacial** | TC e máscara são colocadas no mesmo referencial espacial. | A segmentação deve indicar a localização correta do tumor na TC. | **OK** |
+| **4. Verificação geométrica** | Comparação de tamanho, origem, espaçamento e orientação. | TC e SEG alinhadas devem apresentar geometria compatível. | **OK** (Geometria idêntica em 421/421) |
+| **5. Reamostragem da TC** | Conversão da resolução para $1\text{ mm}^3$ isotrópico (`resampled`). | Preservar a anatomia e a informação de intensidade. | **OK** (Espaçamento `1.0 x 1.0 x 1.0 mm`) |
+| **6. Reamostragem da SEG** | Conversão da máscara para a mesma resolução (`resampled`). | Preservar a região tumoral utilizando interpolação *nearest neighbor*. | **OK** (421/421 máscaras íntegras) |
+|**7. Clipping e Janelamento** | Global Clipping ($-1200$ a $600$ HU) e Multiple Windowing (janela pulmonar e janela de tecido mole) | Realçar estruturas relevantes sem distorcer os limites físicos das Unidades Hounsfield | OK |
+| **8. Normalização**  | Ajuste dos valores de intensidade dos canais. | Valores dentro da faixa prevista, neste caso $[0, 1]$. | OK |
+| 9. Crop / Pad ---  | Recorte ou preenchimento dos volumes para dimensão fixa de $128^3$. | Preservar integralmente a região tumoral e aplicar operações espacialmente correspondentes na TC e SEG. | **ERRO** (52 ROIs vazias; 333 tumores com truncamento nas bordas) |
+| 10. Construção multicanal ---  | Organização dos canais de TC (janela pulmonar e janela de tecido mole/mediastino). | Canais devem corresponder exatamente ao mesmo volume espacial. | Refazer |
+| 10. Preparação da SEG ---  | Organização da máscara tumoral final em $128^3$. | A máscara deve continuar contendo os voxels positivos originais, sem amputação ou perda da lesão. | **COMPROMETIDA PELA ETAPA 7** (52 casos com `0` voxels; 333 parciais) |
+| 11. Salvamento --- | Geração de `ct_multi.npy` e `seg.npy` (`processed_final`). | Arquivos corretos, shapes padronizados e associação por paciente. | Refazer |
+
+
 ## Arquivos
 
 * **`shapes.csv`**: registra as dimensões matriciais (`shape`) e a correspondência geométrica (tamanho, espaçamento, origem e orientação) dos pares de tomografia computadorizada (TC) e máscara tumoral (`SEG`) nas etapas intermediárias de alinhamento (`nii_aligned`) e reamostragem isotrópica (`resampled`).
