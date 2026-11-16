@@ -12,7 +12,7 @@
 | **8. Normalização**  | Ajuste dos valores de intensidade dos canais. | Valores dentro da faixa prevista, neste caso $[0, 1]$. | OK |
 | 9. Crop / Pad ---  | Recorte ou preenchimento dos volumes para dimensão fixa de $128^3$. | Preservar integralmente a região tumoral e aplicar operações espacialmente correspondentes na TC e SEG. | **ERRO** (52 ROIs vazias; 333 tumores com truncamento nas bordas) |
 | 10. Construção multicanal ---  | Organização dos canais de TC (janela pulmonar e janela de tecido mole/mediastino). | Canais devem corresponder exatamente ao mesmo volume espacial. | Refazer |
-| 10. Preparação da SEG ---  | Organização da máscara tumoral final em $128^3$. | A máscara deve continuar contendo os voxels positivos originais, sem amputação ou perda da lesão. | **COMPROMETIDA PELA ETAPA 7** (52 casos com `0` voxels; 333 parciais) |
+| 10. Preparação da SEG ---  | Organização da máscara tumoral final em $128^3$. | A máscara deve continuar contendo os voxels positivos originais, sem amputação ou perda da lesão. | **COMPROMETIDA PELA ETAPA 9** (52 casos com `0` voxels; 333 parciais) |
 | 11. Salvamento --- | Geração de `ct_multi.npy` e `seg.npy` (`processed_final`). | Arquivos corretos, shapes padronizados e associação por paciente. | Refazer |
 
 
